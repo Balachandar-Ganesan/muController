@@ -1,0 +1,175 @@
+import pybullet as p
+import pybullet_data
+import time
+
+
+import pybullet as p
+import time
+
+def render(sec=1):
+    for _ in range(int(240*sec)):
+        p.stepSimulation()
+        time.sleep(1/240)
+
+
+## setup
+p.connect(p.GUI)
+p.resetSimulation()
+p.setGravity(gravX=0, gravY=0, gravZ=-9.8)
+p.setAdditionalSearchPath(path=pybullet_data.getDataPath())
+
+## load URDF
+plane = p.loadURDF("plane.urdf")
+
+cube = p.loadURDF("cube.urdf", basePosition=[0,0,0.1], globalScaling=0.5, useFixedBase=True)
+
+obj = p.loadURDF("cube_small.urdf", basePosition=[1,1,0.1], globalScaling=1.5)
+p.changeVisualShape(objectUniqueId=obj, linkIndex=-1, rgbaColor=[1,0,0,1]) #red
+
+while p.isConnected():
+    p.setRealTimeSimulation(True)
+
+
+import time
+
+for _ in range(240):   #240 timestep commonly used in videogame development
+    p.stepSimulation() #add a physics step (CPU speed = 0.1 second)
+    time.sleep(1/240)  #slow down to real-time (240 steps × 1/240 second sleep = 1 second)
+
+
+robo = p.loadURDF("franka_panda/panda.urdf", 
+                   basePosition=[1,0,0.1], useFixedBase=True)
+
+
+
+import pybullet as p
+import pybullet_data
+
+## setup
+p.connect(p.DIRECT)
+p.resetSimulation()
+p.setGravity(gravX=0, gravY=0, gravZ=-9.8)
+p.setAdditionalSearchPath(path=pybullet_data.getDataPath())
+
+## load URDF
+robo = p.loadURDF("franka_panda/panda.urdf", 
+                  basePosition=[1,0,0.1], useFixedBase=True)
+
+## joints
+dic_info = {
+    0:"joint Index",  #starts at 0
+    1:"joint Name",
+    2:"joint Type",  #0=revolute (rotational), 1=prismatic (sliding), 4=fixed
+    3:"state vectorIndex",
+    4:"velocity vectorIndex",
+    5:"flags",  #nvm always 0
+    6:"joint Damping",  
+    7:"joint Friction",  #coefficient
+    8:"joint lowerLimit",  #min angle
+    9:"joint upperLimit",  #max angle
+    10:"joint maxForce",  #max force allowed
+    11:"joint maxVelocity",  #max speed
+    12:"link Name",  #child link connected to this joint
+    13:"joint Axis",
+    14:"parent FramePos",  #position
+    15:"parent FrameOrn",  #orientation
+    16:"parent Index"  #−1 = base
+}
+for i in range(p.getNumJoints(bodyUniqueId=robo)):
+    joint_info = p.getJointInfo(bodyUniqueId=robo, jointIndex=i)
+    print(f"--- JOINT {i} ---")
+    print({dic_info[k]:joint_info[k] for k in dic_info.keys()})
+
+## links
+for i in range(p.getNumJoints(robo)):
+    link_name = p.getJointInfo(robo, i)[12].decode('utf-8')  #field 12="link Name"
+    dyn = p.getDynamicsInfo(robo, i)
+    pos, orn, *_ = p.getLinkState(robo, i)
+    dic_info = {"Mass":dyn[0], "Friction":dyn[1], "Position":pos, "Orientation":orn}
+    print(f"--- LINK {i}: {link_name} ---")
+    print(dic_info)
+
+
+
+## setup
+p.connect(p.GUI)
+p.resetSimulation()
+p.setGravity(gravX=0, gravY=0, gravZ=-9.8)
+p.setAdditionalSearchPath(path=pybullet_data.getDataPath())
+
+## load URDF
+plane = p.loadURDF("plane.urdf")
+cube = p.loadURDF("cube.urdf", basePosition=[0,0,0.1], globalScaling=0.5, useFixedBase=True)
+robo = p.loadURDF("franka_panda/panda.urdf", basePosition=[1,0,0.1], useFixedBase=True)
+obj = p.loadURDF("cube_small.urdf", basePosition=[1,1,0.1], globalScaling=1.5)
+p.changeVisualShape(objectUniqueId=obj, linkIndex=-1, rgbaColor=[1,0,0,1]) #red
+
+## move arm
+joints = [0,1,2,3,4,5,6]
+target_positions = [1,1,1,1,1,1,1] #<--random numbers
+p.setJointMotorControlArray(bodyUniqueId=robo, jointIndices=joints,
+                            controlMode=p.POSITION_CONTROL,
+                            targetPositions=target_positions,
+                            forces=[50]*len(joints))
+for _ in range(240*3):
+    p.stepSimulation()
+    time.sleep(1/240)
+
+
+
+obj_position, _ = p.getBasePositionAndOrientation(obj)
+obj_position = list(obj_position)
+
+target_positions = p.calculateInverseKinematics(
+    bodyUniqueId=robo,
+    endEffectorLinkIndex=11, #grasp-target link
+    targetPosition=[obj_position[0], obj_position[1], obj_position[2]+0.25], #25cm above object
+    targetOrientation=p.getQuaternionFromEuler([0,-3.14,0]) #[roll,pitch,yaw]=[0,-π,0] -> hand pointing down
+)
+
+arm_joints = [0,1,2,3,4,5,6]
+p.setJointMotorControlArray(bodyUniqueId=robo, controlMode=p.POSITION_CONTROL,
+                            jointIndices=arm_joints,
+                            targetPositions=target_positions[:len(arm_joints)],
+                            forces=[50]*len(arm_joints))
+
+
+## close hand
+p.setJointMotorControl2(bodyUniqueId=robo, controlMode=p.POSITION_CONTROL,
+                        jointIndex=9, #finger_joint1
+                        targetPosition=0, #lower limit for finger_joint1
+                        force=force)
+p.setJointMotorControl2(bodyUniqueId=robo, controlMode=p.POSITION_CONTROL,
+                        jointIndex=10, #finger_joint2
+                        targetPosition=0, #lower limit for finger_joint2
+                        force=force)
+
+## hold the object
+constraint = p.createConstraint(
+    parentBodyUniqueId=robo,
+    parentLinkIndex=11,
+    childBodyUniqueId=obj,
+    childLinkIndex=-1,
+    jointType=p.JOINT_FIXED,
+    jointAxis=[0,0,0],
+    parentFramePosition=[0,0,0],
+    childFramePosition=[0,0,0,1]
+)
+
+
+
+
+## close hand
+p.setJointMotorControl2(bodyUniqueId=robo, controlMode=p.POSITION_CONTROL,
+                        jointIndex=9, #finger_joint1
+                        targetPosition=0.04, #upper limit for finger_joint1
+                        force=force)
+p.setJointMotorControl2(bodyUniqueId=robo, controlMode=p.POSITION_CONTROL,
+                        jointIndex=10, #finger_joint2
+                        targetPosition=0.04, #upper limit for finger_joint2
+                        force=force)
+
+## drop the obj
+p.removeConstraint(constraint)
+
+
