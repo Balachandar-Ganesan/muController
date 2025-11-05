@@ -1,0 +1,20 @@
+ANPR 
+Automatic License/Number Plate Recognition (ANPR) with Python
+https://pyimagesearch.com/2020/09/21/opencv-automatic-license-number-plate-recognition-anpr-with-python/
+
+GridDB 
+https://griddb-iot-hackathon.devpost.com/
+
+Walk Me New Robo Model
+
+https://www.youtube.com/watch?v=VzD9bhUIaK4
+
+Gazebo Course (Free)
+
+https://www.theconstruct.ai/robotigniteacademy_learnros/ros-courses-library/mastering-gazebo-simulator-online-course/
+
+
+IOT Messaging project Course
+https://www.udemy.com/course/create-a-working-iot-project-with-iot-database-griddb/
+
+
